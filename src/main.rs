@@ -17,6 +17,7 @@ fn main() {
             }
             // Should probably check here that the provided arguments to the command are correct before proceeding
             Arguments::CycleTags { .. } => Ok(args),
+            Arguments::ToggleTags { .. } => Ok(args),
         },
         Err(error) => {
             eprintln!("Error: {}", error);
@@ -69,21 +70,61 @@ fn main() {
 
     event_queue.roundtrip(&mut river).unwrap();
 
-    if let Ok(Arguments::CycleTags { direction, n_tags }) = command {
-        let x: &u32 = &river.clone().cycle_tags(direction, n_tags);
+    match command {
+        Ok(Arguments::CycleTags { direction, n_tags }) => {
+            let new_tags: &u32 = &river.clone().cycle_tags(direction, n_tags);
 
-        river
-            .control
-            .as_ref()
-            .unwrap()
-            .add_argument(String::from("set-focused-tags"));
-        river.control.as_ref().unwrap().add_argument(x.to_string());
+            river
+                .control
+                .as_ref()
+                .unwrap()
+                .add_argument(String::from("set-focused-tags"));
+            river
+                .control
+                .as_ref()
+                .unwrap()
+                .add_argument(new_tags.to_string());
 
-        river
-            .control
-            .as_ref()
-            .unwrap()
-            .run_command(river.wl_seat.as_ref().unwrap(), &qh, ());
-        event_queue.roundtrip(&mut river).unwrap();
+            river
+                .control
+                .as_ref()
+                .unwrap()
+                .run_command(river.wl_seat.as_ref().unwrap(), &qh, ());
+            event_queue.roundtrip(&mut river).unwrap();
+        }
+        Ok(Arguments::ToggleTags { to_tags }) => {
+            if river.clone().toggle_tags(to_tags) {
+                river
+                    .control
+                    .as_ref()
+                    .unwrap()
+                    .add_argument(String::from("focus-previous-tags"));
+                river.control.as_ref().unwrap().run_command(
+                    river.wl_seat.as_ref().unwrap(),
+                    &qh,
+                    (),
+                );
+                event_queue.roundtrip(&mut river).unwrap();
+            } else {
+                river
+                    .control
+                    .as_ref()
+                    .unwrap()
+                    .add_argument(String::from("set-focused-tags"));
+                river
+                    .control
+                    .as_ref()
+                    .unwrap()
+                    .add_argument(to_tags.to_string());
+
+                river.control.as_ref().unwrap().run_command(
+                    river.wl_seat.as_ref().unwrap(),
+                    &qh,
+                    (),
+                );
+                event_queue.roundtrip(&mut river).unwrap();
+            }
+        }
+        _ => (),
     }
 }

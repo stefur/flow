@@ -3,6 +3,7 @@ This is a rewrite of [riverwm-utils](https://github.com/NickHastings/riverwm-uti
 
 ## Features
 - Cycle the focused tags, either to next or previous tag.
+- Toggle tags. If chosen tag is already focused, toggle to previous tag instead.
 
 ## Installation from source
 1. Make sure you've got Rust installed. Either via your distributions package manager or [`rustup`](https://rustup.rs/).
@@ -14,3 +15,4 @@ Currently the following commands can be used with flow.
 | Command | Arguments | Description | Example |
 | --- | --- | --- | --- |
 | `cycle-tags` | Direction: `next` or `previous`. Number of available tags: `int`, defaults to `9` if omitted. | Move focused tag to the next or previous tag. | `flow cycle-tags next 6` |
+| `toggle-tags` | Tagmask to focus. | Attempt to focus selected tagmask. Toggle previous tags if already focused. | `flow toggle-tags 64` |

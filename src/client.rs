@@ -46,6 +46,10 @@ impl River {
         }
     }
 
+    pub fn toggle_tags(self, to_tags: u32) -> bool {
+        self.focused_tags.unwrap_or_default() == to_tags
+    }
+
     pub fn cycle_tags(self, direction: String, mut n_tags: Option<u32>) -> u32 {
         if n_tags.is_none() {
             n_tags = Some(9);
