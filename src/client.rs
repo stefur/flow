@@ -3,23 +3,25 @@ use crate::protocols::river_protocols::zriver_control_v1::ZriverControlV1;
 use crate::protocols::river_protocols::zriver_output_status_v1::{
     Event::FocusedTags, ZriverOutputStatusV1,
 };
-use crate::protocols::river_protocols::zriver_seat_status_v1;
-use crate::protocols::river_protocols::zriver_status_manager_v1;
+use crate::protocols::river_protocols::zriver_seat_status_v1::{
+    Event::FocusedOutput, ZriverSeatStatusV1,
+};
+use crate::protocols::river_protocols::zriver_status_manager_v1::ZriverStatusManagerV1;
 use wayland_client::{
     protocol::{
-        wl_output::{self, WlOutput},
-        wl_registry::{self, WlRegistry},
-        wl_seat::{self, WlSeat},
+        wl_output::WlOutput,
+        wl_registry::{Event::Global, WlRegistry},
+        wl_seat::{Event::Name, WlSeat},
     },
-    Dispatch, Proxy,
+    Connection, Dispatch, Proxy, QueueHandle,
 };
 // This struct represents the state of our app. This simple app does not
 // need any state, by this type still supports the `Dispatch` implementations.
 
 #[derive(Debug, Clone)]
 pub struct River {
-    pub status_manager: Option<zriver_status_manager_v1::ZriverStatusManagerV1>,
-    pub status: Option<zriver_seat_status_v1::ZriverSeatStatusV1>,
+    pub status_manager: Option<ZriverStatusManagerV1>,
+    pub status: Option<ZriverSeatStatusV1>,
     pub seat: Option<String>,
     pub wl_seat: Option<WlSeat>,
     pub focused_output: Option<WlOutput>,
@@ -87,10 +89,10 @@ impl Dispatch<WlRegistry, ()> for River {
         registry: &WlRegistry,
         event: <WlRegistry as Proxy>::Event,
         _: &(),
-        _: &wayland_client::Connection,
-        qh: &wayland_client::QueueHandle<Self>,
+        _: &Connection,
+        qh: &QueueHandle<Self>,
     ) {
-        if let wl_registry::Event::Global {
+        if let Global {
             name,
             interface,
             version,
@@ -98,17 +100,15 @@ impl Dispatch<WlRegistry, ()> for River {
         {
             match interface.as_str() {
                 "wl_output" => {
-                    registry.bind::<wl_output::WlOutput, _, Self>(name, version, qh, ());
+                    registry.bind::<WlOutput, _, Self>(name, version, qh, ());
                 }
                 "zriver_status_manager_v1" => {
-                    state.status_manager = Some(
-                        registry.bind::<zriver_status_manager_v1::ZriverStatusManagerV1, _, Self>(
-                            name,
-                            version,
-                            qh,
-                            (),
-                        ),
-                    );
+                    state.status_manager = Some(registry.bind::<ZriverStatusManagerV1, _, Self>(
+                        name,
+                        version,
+                        qh,
+                        (),
+                    ));
                 }
                 "zriver_control_v1" => {
                     state.control =
@@ -127,10 +127,10 @@ impl Dispatch<ZriverOutputStatusV1, ()> for River {
     fn event(
         state: &mut Self,
         _seat_status: &ZriverOutputStatusV1,
-        event: <ZriverOutputStatusV1 as wayland_client::Proxy>::Event,
+        event: <ZriverOutputStatusV1 as Proxy>::Event,
         _: &(),
-        _: &wayland_client::Connection,
-        _qhandle: &wayland_client::QueueHandle<Self>,
+        _: &Connection,
+        _qhandle: &QueueHandle<Self>,
     ) {
         if let FocusedTags { tags } = event {
             state.focused_tags = Some(tags);
@@ -138,16 +138,16 @@ impl Dispatch<ZriverOutputStatusV1, ()> for River {
     }
 }
 
-impl Dispatch<zriver_seat_status_v1::ZriverSeatStatusV1, ()> for River {
+impl Dispatch<ZriverSeatStatusV1, ()> for River {
     fn event(
         state: &mut Self,
-        _seat_status: &zriver_seat_status_v1::ZriverSeatStatusV1,
-        event: <zriver_seat_status_v1::ZriverSeatStatusV1 as wayland_client::Proxy>::Event,
+        _seat_status: &ZriverSeatStatusV1,
+        event: <ZriverSeatStatusV1 as Proxy>::Event,
         _: &(),
-        _: &wayland_client::Connection,
-        _qhandle: &wayland_client::QueueHandle<Self>,
+        _: &Connection,
+        _qhandle: &QueueHandle<Self>,
     ) {
-        if let zriver_seat_status_v1::Event::FocusedOutput { output } = event {
+        if let FocusedOutput { output } = event {
             state.focused_output = Some(output);
         }
     }
@@ -157,10 +157,10 @@ impl Dispatch<WlOutput, ()> for River {
     fn event(
         _: &mut Self,
         _: &WlOutput,
-        _: <WlOutput as wayland_client::Proxy>::Event,
+        _: <WlOutput as Proxy>::Event,
         _: &(),
-        _: &wayland_client::Connection,
-        _: &wayland_client::QueueHandle<Self>,
+        _: &Connection,
+        _: &QueueHandle<Self>,
     ) {
     }
 }
@@ -169,25 +169,25 @@ impl Dispatch<WlSeat, ()> for River {
     fn event(
         state: &mut Self,
         _wl_seat: &WlSeat,
-        event: <WlSeat as wayland_client::Proxy>::Event,
+        event: <WlSeat as Proxy>::Event,
         _: &(),
-        _: &wayland_client::Connection,
-        _qhandle: &wayland_client::QueueHandle<Self>,
+        _: &Connection,
+        _qhandle: &QueueHandle<Self>,
     ) {
-        if let wl_seat::Event::Name { name } = event {
+        if let Name { name } = event {
             state.seat = Some(name);
         }
     }
 }
 
-impl Dispatch<zriver_status_manager_v1::ZriverStatusManagerV1, ()> for River {
+impl Dispatch<ZriverStatusManagerV1, ()> for River {
     fn event(
         _: &mut Self,
-        _: &zriver_status_manager_v1::ZriverStatusManagerV1,
-        _: <zriver_status_manager_v1::ZriverStatusManagerV1 as wayland_client::Proxy>::Event,
+        _: &ZriverStatusManagerV1,
+        _: <ZriverStatusManagerV1 as Proxy>::Event,
         _: &(),
-        _: &wayland_client::Connection,
-        _: &wayland_client::QueueHandle<Self>,
+        _: &Connection,
+        _: &QueueHandle<Self>,
     ) {
     }
 }
@@ -196,10 +196,10 @@ impl Dispatch<ZriverCommandCallbackV1, ()> for River {
     fn event(
         _: &mut Self,
         _: &ZriverCommandCallbackV1,
-        _: <ZriverCommandCallbackV1 as wayland_client::Proxy>::Event,
+        _: <ZriverCommandCallbackV1 as Proxy>::Event,
         _: &(),
-        _: &wayland_client::Connection,
-        _: &wayland_client::QueueHandle<Self>,
+        _: &Connection,
+        _: &QueueHandle<Self>,
     ) {
     }
 }
@@ -208,10 +208,10 @@ impl Dispatch<ZriverControlV1, ()> for River {
     fn event(
         _: &mut Self,
         _: &ZriverControlV1,
-        _: <ZriverControlV1 as wayland_client::Proxy>::Event,
+        _: <ZriverControlV1 as Proxy>::Event,
         _: &(),
-        _: &wayland_client::Connection,
-        _: &wayland_client::QueueHandle<Self>,
+        _: &Connection,
+        _: &QueueHandle<Self>,
     ) {
     }
 }
