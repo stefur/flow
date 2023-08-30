@@ -57,7 +57,7 @@ fn main() {
             .status_manager
             .as_ref()
             .unwrap()
-            .get_river_seat_status(river.wl_seat.as_ref().unwrap(), &qh, ()),
+            .get_river_seat_status(river.seat.as_ref().unwrap(), &qh, ()),
     );
     event_queue.roundtrip(&mut river).unwrap();
 
@@ -89,7 +89,7 @@ fn main() {
                 .control
                 .as_ref()
                 .unwrap()
-                .run_command(river.wl_seat.as_ref().unwrap(), &qh, ());
+                .run_command(river.seat.as_ref().unwrap(), &qh, ());
             event_queue.roundtrip(&mut river).unwrap();
         }
         Ok(Arguments::ToggleTags { to_tags }) => {
@@ -99,11 +99,11 @@ fn main() {
                     .as_ref()
                     .unwrap()
                     .add_argument(String::from("focus-previous-tags"));
-                river.control.as_ref().unwrap().run_command(
-                    river.wl_seat.as_ref().unwrap(),
-                    &qh,
-                    (),
-                );
+                river
+                    .control
+                    .as_ref()
+                    .unwrap()
+                    .run_command(river.seat.as_ref().unwrap(), &qh, ());
                 event_queue.roundtrip(&mut river).unwrap();
             } else {
                 river
@@ -117,11 +117,11 @@ fn main() {
                     .unwrap()
                     .add_argument(to_tags.to_string());
 
-                river.control.as_ref().unwrap().run_command(
-                    river.wl_seat.as_ref().unwrap(),
-                    &qh,
-                    (),
-                );
+                river
+                    .control
+                    .as_ref()
+                    .unwrap()
+                    .run_command(river.seat.as_ref().unwrap(), &qh, ());
                 event_queue.roundtrip(&mut river).unwrap();
             }
         }
