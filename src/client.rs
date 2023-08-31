@@ -12,7 +12,7 @@ use wayland_client::{
         wl_registry::{self, WlRegistry},
         wl_seat::WlSeat,
     },
-    Dispatch, Proxy,
+    Dispatch, Proxy, QueueHandle,
 };
 // This struct represents the state of our app. This simple app does not
 // need any state, by this type still supports the `Dispatch` implementations.
@@ -49,16 +49,61 @@ impl River {
         }
     }
 
+    pub fn focus_previous_tags(&self, queue_handle: &QueueHandle<Self>) -> () {
+        self.control
+            .as_ref()
+            .unwrap()
+            .add_argument(String::from("focus-previous-tags"));
+
+        self.control
+            .as_ref()
+            .unwrap()
+            .run_command(self.seat.as_ref().unwrap(), &queue_handle, ());
+    }
+
+    // Focus output
+    pub fn focus_output(&self, output: &String, queue_handle: &QueueHandle<Self>) -> () {
+        self.control
+            .as_ref()
+            .unwrap()
+            .add_argument(String::from("focus-output"));
+        self.control
+            .as_ref()
+            .unwrap()
+            .add_argument(output.to_owned());
+        self.control
+            .as_ref()
+            .unwrap()
+            .run_command(self.seat.as_ref().unwrap(), &queue_handle, ());
+    }
+
     pub fn toggle_tags(self, to_tags: u32) -> bool {
         self.focused_tags.unwrap_or_default() == to_tags
     }
 
-    pub fn cycle_tags(self, direction: String, mut n_tags: Option<u32>) -> u32 {
-        if n_tags.is_none() {
-            n_tags = Some(9);
-        }
+    pub fn set_focused_tags(&self, tags: &u32, queue_handle: &QueueHandle<Self>) -> () {
+        self.control
+            .as_ref()
+            .unwrap()
+            .add_argument(String::from("set-focused-tags"));
+        self.control
+            .as_ref()
+            .unwrap()
+            .add_argument(tags.to_string());
 
-        let last_tag: u32 = 1 << (n_tags.unwrap() - 1);
+        self.control
+            .as_ref()
+            .unwrap()
+            .run_command(self.seat.as_ref().unwrap(), &queue_handle, ());
+    }
+
+    pub fn cycle_tags(
+        &self,
+        direction: &String,
+        n_tags: &u32,
+        queue_handle: &QueueHandle<Self>,
+    ) -> () {
+        let last_tag: u32 = 1 << (n_tags - 1);
         let mut new_tags = 0;
         let mut tags = self.focused_tags.unwrap();
 
@@ -80,7 +125,20 @@ impl River {
             }
             _ => (),
         }
-        new_tags
+
+        self.control
+            .as_ref()
+            .unwrap()
+            .add_argument(String::from("set-focused-tags"));
+        self.control
+            .as_ref()
+            .unwrap()
+            .add_argument(new_tags.to_string());
+
+        self.control
+            .as_ref()
+            .unwrap()
+            .run_command(self.seat.as_ref().unwrap(), &queue_handle, ());
     }
 }
 
