@@ -8,7 +8,7 @@ use std::error::Error;
 use wayland_client::Connection;
 
 fn main() {
-    // Parse the options for use within the match rule for property changes
+    // Parse the options
     let command: Result<Arguments, Box<dyn Error>> = match parse_args() {
         Ok(args) => match &args {
             Arguments::Global { help: _ } => {
@@ -31,9 +31,9 @@ fn main() {
     let display = conn.display();
 
     let mut event_queue = conn.new_event_queue();
-    let qh = event_queue.handle();
+    let queue_handle = event_queue.handle();
 
-    let _registry = display.get_registry(&qh, ());
+    let _registry = display.get_registry(&queue_handle, ());
 
     let mut river = River::default();
 
@@ -45,7 +45,7 @@ fn main() {
             .status_manager
             .as_ref()
             .unwrap()
-            .get_river_seat_status(river.seat.as_ref().unwrap(), &qh, ()),
+            .get_river_seat_status(river.seat.as_ref().unwrap(), &queue_handle, ()),
     );
     event_queue.roundtrip(&mut river).unwrap();
 
@@ -55,7 +55,7 @@ fn main() {
             .status_manager
             .as_ref()
             .unwrap()
-            .get_river_output_status(&object, &qh, (object.to_owned(), name.to_string()));
+            .get_river_output_status(object, &queue_handle, (object.to_owned(), name.to_string()));
     }
 
     event_queue.roundtrip(&mut river).unwrap();
@@ -63,13 +63,13 @@ fn main() {
     match command {
         Ok(Arguments::CycleTags { direction, n_tags }) => {
             // If there are no n_tags assigned, or if unwrap fails, we assume default of 9
-            river.cycle_tags(&direction, &n_tags.unwrap_or_else(|| 9), &qh);
+            river.cycle_tags(&direction, &n_tags.unwrap_or(9), &queue_handle);
         }
         Ok(Arguments::ToggleTags { to_tags }) => {
             if river.clone().toggle_tags(to_tags) {
-                river.focus_previous_tags(&qh);
+                river.focus_previous_tags(&queue_handle);
             } else {
-                river.set_focused_tags(&to_tags, &qh);
+                river.set_focused_tags(&to_tags, &queue_handle);
             }
         }
         Ok(Arguments::FocusUrgentTags) => {
@@ -77,8 +77,8 @@ fn main() {
             if river.urgent.is_empty() {
                 return;
             }
-            river.focus_output(river.urgent.keys().next().unwrap(), &qh);
-            river.set_focused_tags(river.urgent.values().next().unwrap(), &qh);
+            river.focus_output(river.urgent.keys().next().unwrap(), &queue_handle);
+            river.set_focused_tags(river.urgent.values().next().unwrap(), &queue_handle);
         }
         _ => (),
     }

@@ -14,8 +14,6 @@ use wayland_client::{
     },
     Dispatch, Proxy, QueueHandle,
 };
-// This struct represents the state of our app. This simple app does not
-// need any state, by this type still supports the `Dispatch` implementations.
 
 #[derive(Debug, Clone)]
 pub struct River {
@@ -49,7 +47,7 @@ impl River {
         }
     }
 
-    pub fn focus_previous_tags(&self, queue_handle: &QueueHandle<Self>) -> () {
+    pub fn focus_previous_tags(&self, queue_handle: &QueueHandle<Self>) {
         self.control
             .as_ref()
             .unwrap()
@@ -58,11 +56,11 @@ impl River {
         self.control
             .as_ref()
             .unwrap()
-            .run_command(self.seat.as_ref().unwrap(), &queue_handle, ());
+            .run_command(self.seat.as_ref().unwrap(), queue_handle, ());
     }
 
     // Focus output
-    pub fn focus_output(&self, output: &String, queue_handle: &QueueHandle<Self>) -> () {
+    pub fn focus_output(&self, output: &String, queue_handle: &QueueHandle<Self>) {
         self.control
             .as_ref()
             .unwrap()
@@ -74,14 +72,14 @@ impl River {
         self.control
             .as_ref()
             .unwrap()
-            .run_command(self.seat.as_ref().unwrap(), &queue_handle, ());
+            .run_command(self.seat.as_ref().unwrap(), queue_handle, ());
     }
 
     pub fn toggle_tags(self, to_tags: u32) -> bool {
         self.focused_tags.unwrap_or_default() == to_tags
     }
 
-    pub fn set_focused_tags(&self, tags: &u32, queue_handle: &QueueHandle<Self>) -> () {
+    pub fn set_focused_tags(&self, tags: &u32, queue_handle: &QueueHandle<Self>) {
         self.control
             .as_ref()
             .unwrap()
@@ -94,20 +92,15 @@ impl River {
         self.control
             .as_ref()
             .unwrap()
-            .run_command(self.seat.as_ref().unwrap(), &queue_handle, ());
+            .run_command(self.seat.as_ref().unwrap(), queue_handle, ());
     }
 
-    pub fn cycle_tags(
-        &self,
-        direction: &String,
-        n_tags: &u32,
-        queue_handle: &QueueHandle<Self>,
-    ) -> () {
+    pub fn cycle_tags(&self, direction: &str, n_tags: &u32, queue_handle: &QueueHandle<Self>) {
         let last_tag: u32 = 1 << (n_tags - 1);
         let mut new_tags = 0;
         let mut tags = self.focused_tags.unwrap();
 
-        match direction.to_lowercase().as_str() {
+        match direction {
             "next" => {
                 if tags & last_tag != 0 {
                     tags ^= last_tag;
@@ -138,7 +131,7 @@ impl River {
         self.control
             .as_ref()
             .unwrap()
-            .run_command(self.seat.as_ref().unwrap(), &queue_handle, ());
+            .run_command(self.seat.as_ref().unwrap(), queue_handle, ());
     }
 }
 
@@ -228,17 +221,14 @@ impl Dispatch<zriver_seat_status_v1::ZriverSeatStatusV1, ()> for River {
 impl Dispatch<WlOutput, ()> for River {
     fn event(
         state: &mut Self,
-        proxy: &WlOutput,
+        output: &WlOutput,
         event: <WlOutput as wayland_client::Proxy>::Event,
         _: &(),
         _: &wayland_client::Connection,
-        queue_handle: &wayland_client::QueueHandle<Self>,
+        _: &wayland_client::QueueHandle<Self>,
     ) {
-        match event {
-            OutputName { name } => {
-                state.outputs.insert(proxy.to_owned(), name);
-            }
-            _ => (),
+        if let OutputName { name } = event {
+            state.outputs.insert(output.to_owned(), name);
         }
     }
 }
