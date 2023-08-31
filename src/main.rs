@@ -18,7 +18,7 @@ fn main() {
             // Should probably check here that the provided arguments to the command are correct before proceeding
             Arguments::CycleTags { .. } => Ok(args),
             Arguments::ToggleTags { .. } => Ok(args),
-            Arguments::FocusUrgentTags { .. } => Ok(args),
+            Arguments::FocusUrgentTags => Ok(args),
         },
         Err(error) => {
             eprintln!("Error: {}", error);
@@ -35,12 +35,12 @@ fn main() {
 
     let _registry = display.get_registry(&queue_handle, ());
 
-    let mut river = River::default();
+    let mut river = River::new();
 
     event_queue.roundtrip(&mut river).unwrap();
 
     // Get the seat status
-    river.status = Some(
+    river.seat_status = Some(
         river
             .status_manager
             .as_ref()
@@ -51,11 +51,12 @@ fn main() {
 
     // Setup the outputs
     for (object, name) in &river.outputs {
-        river
+        let output_status = river
             .status_manager
             .as_ref()
             .unwrap()
             .get_river_output_status(object, &queue_handle, (object.to_owned(), name.to_string()));
+        river.output_status.push(output_status);
     }
 
     event_queue.roundtrip(&mut river).unwrap();
@@ -66,14 +67,14 @@ fn main() {
             river.cycle_tags(&direction, &n_tags.unwrap_or(9), &queue_handle);
         }
         Ok(Arguments::ToggleTags { to_tags }) => {
-            if river.clone().toggle_tags(to_tags) {
+            if river.toggle_tags(&to_tags) {
                 river.focus_previous_tags(&queue_handle);
             } else {
                 river.set_focused_tags(&to_tags, &queue_handle);
             }
         }
         Ok(Arguments::FocusUrgentTags) => {
-            // If there are no empty tags there is nothing to do
+            // If there are no urgent tags there is nothing to do
             if river.urgent.is_empty() {
                 return;
             }
@@ -83,4 +84,5 @@ fn main() {
         _ => (),
     }
     event_queue.roundtrip(&mut river).unwrap();
+    river.destroy();
 }
