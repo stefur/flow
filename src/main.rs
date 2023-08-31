@@ -18,6 +18,7 @@ fn main() {
             // Should probably check here that the provided arguments to the command are correct before proceeding
             Arguments::CycleTags { .. } => Ok(args),
             Arguments::ToggleTags { .. } => Ok(args),
+            Arguments::FocusUrgentTags { .. } => Ok(args),
         },
         Err(error) => {
             eprintln!("Error: {}", error);
@@ -61,12 +62,14 @@ fn main() {
     );
     event_queue.roundtrip(&mut river).unwrap();
 
-    // Get the focused output
-    river
-        .status_manager
-        .as_ref()
-        .unwrap()
-        .get_river_output_status(river.focused_output.as_ref().unwrap(), &qh, ());
+    // Setup the outputs
+    for (object, name) in &river.outputs {
+        river
+            .status_manager
+            .as_ref()
+            .unwrap()
+            .get_river_output_status(&object, &qh, (object.to_owned(), name.to_string()));
+    }
 
     event_queue.roundtrip(&mut river).unwrap();
 
@@ -124,6 +127,45 @@ fn main() {
                     .run_command(river.seat.as_ref().unwrap(), &qh, ());
                 event_queue.roundtrip(&mut river).unwrap();
             }
+        }
+        Ok(Arguments::FocusUrgentTags) => {
+            if river.urgent.is_empty() {
+                return;
+            }
+            river
+                .control
+                .as_ref()
+                .unwrap()
+                .add_argument(String::from("focus-output"));
+            river
+                .control
+                .as_ref()
+                .unwrap()
+                .add_argument(river.urgent.keys().next().unwrap().to_owned());
+
+            river
+                .control
+                .as_ref()
+                .unwrap()
+                .run_command(river.seat.as_ref().unwrap(), &qh, ());
+            event_queue.roundtrip(&mut river).unwrap();
+            river
+                .control
+                .as_ref()
+                .unwrap()
+                .add_argument(String::from("set-focused-tags"));
+            river
+                .control
+                .as_ref()
+                .unwrap()
+                .add_argument(river.urgent.values().next().unwrap().to_string());
+
+            river
+                .control
+                .as_ref()
+                .unwrap()
+                .run_command(river.seat.as_ref().unwrap(), &qh, ());
+            event_queue.roundtrip(&mut river).unwrap();
         }
         _ => (),
     }

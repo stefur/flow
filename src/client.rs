@@ -1,13 +1,14 @@
 use crate::protocols::river_protocols::zriver_command_callback_v1::ZriverCommandCallbackV1;
 use crate::protocols::river_protocols::zriver_control_v1::ZriverControlV1;
 use crate::protocols::river_protocols::zriver_output_status_v1::{
-    Event::FocusedTags, ZriverOutputStatusV1,
+    Event::FocusedTags, Event::UrgentTags, ZriverOutputStatusV1,
 };
 use crate::protocols::river_protocols::zriver_seat_status_v1;
 use crate::protocols::river_protocols::zriver_status_manager_v1;
+use std::collections::HashMap;
 use wayland_client::{
     protocol::{
-        wl_output::{self, WlOutput},
+        wl_output::{Event::Name as OutputName, WlOutput},
         wl_registry::{self, WlRegistry},
         wl_seat::WlSeat,
     },
@@ -21,8 +22,10 @@ pub struct River {
     pub status_manager: Option<zriver_status_manager_v1::ZriverStatusManagerV1>,
     pub status: Option<zriver_seat_status_v1::ZriverSeatStatusV1>,
     pub seat: Option<WlSeat>,
+    pub outputs: HashMap<WlOutput, String>,
     pub focused_output: Option<WlOutput>,
     pub focused_tags: Option<u32>,
+    pub urgent: HashMap<String, u32>,
     pub control: Option<ZriverControlV1>,
 }
 
@@ -38,8 +41,10 @@ impl River {
             status_manager: None,
             seat: None,
             status: None,
+            outputs: HashMap::new(),
             focused_output: None,
             focused_tags: None,
+            urgent: HashMap::new(),
             control: None,
         }
     }
@@ -96,7 +101,7 @@ impl Dispatch<WlRegistry, ()> for River {
         {
             match interface.as_str() {
                 "wl_output" => {
-                    registry.bind::<wl_output::WlOutput, _, Self>(name, version, qh, ());
+                    registry.bind::<WlOutput, _, Self>(name, version, qh, ());
                 }
                 "zriver_status_manager_v1" => {
                     state.status_manager = Some(
@@ -121,17 +126,28 @@ impl Dispatch<WlRegistry, ()> for River {
     }
 }
 
-impl Dispatch<ZriverOutputStatusV1, ()> for River {
+impl Dispatch<ZriverOutputStatusV1, (WlOutput, String)> for River {
     fn event(
         state: &mut Self,
         _seat_status: &ZriverOutputStatusV1,
         event: <ZriverOutputStatusV1 as wayland_client::Proxy>::Event,
-        _: &(),
+        output: &(WlOutput, String),
         _: &wayland_client::Connection,
         _qhandle: &wayland_client::QueueHandle<Self>,
     ) {
-        if let FocusedTags { tags } = event {
-            state.focused_tags = Some(tags);
+        match event {
+            FocusedTags { tags } => {
+                if &output.0 != state.focused_output.as_ref().unwrap() {
+                    return;
+                }
+                state.focused_tags = Some(tags);
+            }
+            UrgentTags { tags } => {
+                if tags != 0 {
+                    state.urgent.insert(output.1.to_owned(), tags);
+                }
+            }
+            _ => (),
         }
     }
 }
@@ -153,13 +169,19 @@ impl Dispatch<zriver_seat_status_v1::ZriverSeatStatusV1, ()> for River {
 
 impl Dispatch<WlOutput, ()> for River {
     fn event(
-        _: &mut Self,
-        _: &WlOutput,
-        _: <WlOutput as wayland_client::Proxy>::Event,
+        state: &mut Self,
+        proxy: &WlOutput,
+        event: <WlOutput as wayland_client::Proxy>::Event,
         _: &(),
         _: &wayland_client::Connection,
-        _: &wayland_client::QueueHandle<Self>,
+        queue_handle: &wayland_client::QueueHandle<Self>,
     ) {
+        match event {
+            OutputName { name } => {
+                state.outputs.insert(proxy.to_owned(), name);
+            }
+            _ => (),
+        }
     }
 }
 

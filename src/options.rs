@@ -21,6 +21,7 @@ pub enum Arguments {
     ToggleTags {
         to_tags: u32,
     },
+    FocusUrgentTags,
 }
 
 pub fn parse_args() -> Result<Arguments, Box<dyn std::error::Error>> {
@@ -34,6 +35,7 @@ pub fn parse_args() -> Result<Arguments, Box<dyn std::error::Error>> {
         Some("toggle-tags") => Ok(Arguments::ToggleTags {
             to_tags: pargs.free_from_str()?,
         }),
+        Some("focus-urgent-tags") => Ok(Arguments::FocusUrgentTags),
         Some(_) => Err("Unknown subcommand".into()),
         None => Ok(Arguments::Global {
             help: pargs.contains(["-h", "--help"]),
