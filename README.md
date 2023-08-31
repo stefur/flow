@@ -1,9 +1,10 @@
 # flow
-This is a rewrite of [riverwm-utils](https://github.com/NickHastings/riverwm-utils) in Rust (very cliché, I know).
+This started as a rewrite of [riverwm-utils](https://github.com/NickHastings/riverwm-utils) in Rust (very cliché, I know). Then I decided to add a few other features as well. See below.
 
 ## Features
 - Cycle the focused tags, either to next or previous tag.
 - Toggle tags. If chosen tag is already focused, toggle to previous tag instead.
+- Go to urgent tag
 
 ## Installation from source
 1. Make sure you've got Rust installed. Either via your distributions package manager or [`rustup`](https://rustup.rs/).
