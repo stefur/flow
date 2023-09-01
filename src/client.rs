@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use wayland_client::{
     protocol::{
         wl_output::{Event::Name as OutputName, WlOutput},
-        wl_registry::{self, WlRegistry},
+        wl_registry::{Event::Global, WlRegistry},
         wl_seat::WlSeat,
     },
     Connection, Dispatch, Proxy, QueueHandle,
@@ -45,6 +45,16 @@ impl River {
         }
     }
 
+    pub fn send_command(&self, arguments: Vec<String>, queue_handle: &QueueHandle<Self>) {
+        for arg in arguments.iter() {
+            self.control.as_ref().unwrap().add_argument(arg.to_string());
+        }
+        self.control
+            .as_ref()
+            .unwrap()
+            .run_command(self.seat.as_ref().unwrap(), queue_handle, ());
+    }
+
     pub fn destroy(&self) {
         self.status_manager.as_ref().unwrap().destroy();
         for output_status in self.output_status.iter() {
@@ -54,52 +64,8 @@ impl River {
         self.control.as_ref().unwrap().destroy();
     }
 
-    pub fn focus_previous_tags(&self, queue_handle: &QueueHandle<Self>) {
-        self.control
-            .as_ref()
-            .unwrap()
-            .add_argument(String::from("focus-previous-tags"));
-
-        self.control
-            .as_ref()
-            .unwrap()
-            .run_command(self.seat.as_ref().unwrap(), queue_handle, ());
-    }
-
-    // Focus output
-    pub fn focus_output(&self, output: &String, queue_handle: &QueueHandle<Self>) {
-        self.control
-            .as_ref()
-            .unwrap()
-            .add_argument(String::from("focus-output"));
-        self.control
-            .as_ref()
-            .unwrap()
-            .add_argument(output.to_owned());
-        self.control
-            .as_ref()
-            .unwrap()
-            .run_command(self.seat.as_ref().unwrap(), queue_handle, ());
-    }
-
     pub fn toggle_tags(&self, to_tags: &u32) -> bool {
         self.focused_tags.unwrap_or_default() == *to_tags
-    }
-
-    pub fn set_focused_tags(&self, tags: &u32, queue_handle: &QueueHandle<Self>) {
-        self.control
-            .as_ref()
-            .unwrap()
-            .add_argument(String::from("set-focused-tags"));
-        self.control
-            .as_ref()
-            .unwrap()
-            .add_argument(tags.to_string());
-
-        self.control
-            .as_ref()
-            .unwrap()
-            .run_command(self.seat.as_ref().unwrap(), queue_handle, ());
     }
 
     pub fn cycle_tags(&self, direction: &str, n_tags: &u32, queue_handle: &QueueHandle<Self>) {
@@ -126,7 +92,10 @@ impl River {
             _ => (),
         }
 
-        self.set_focused_tags(&new_tags, queue_handle);
+        self.send_command(
+            vec![String::from("set-focused-tags"), new_tags.to_string()],
+            queue_handle,
+        );
     }
 }
 
@@ -139,7 +108,7 @@ impl Dispatch<WlRegistry, ()> for River {
         _: &Connection,
         queue_handle: &QueueHandle<Self>,
     ) {
-        if let wl_registry::Event::Global {
+        if let Global {
             name,
             interface,
             version,

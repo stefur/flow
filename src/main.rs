@@ -68,9 +68,12 @@ fn main() {
         }
         Ok(Arguments::ToggleTags { to_tags }) => {
             if river.toggle_tags(&to_tags) {
-                river.focus_previous_tags(&queue_handle);
+                river.send_command(vec![String::from("focus-previous-tags")], &queue_handle);
             } else {
-                river.set_focused_tags(&to_tags, &queue_handle);
+                river.send_command(
+                    vec![String::from("set-focused-tags"), to_tags.to_string()],
+                    &queue_handle,
+                );
             }
         }
         Ok(Arguments::FocusUrgentTags) => {
@@ -78,8 +81,20 @@ fn main() {
             if river.urgent.is_empty() {
                 return;
             }
-            river.focus_output(river.urgent.keys().next().unwrap(), &queue_handle);
-            river.set_focused_tags(river.urgent.values().next().unwrap(), &queue_handle);
+            river.send_command(
+                vec![
+                    String::from("focus-output"),
+                    river.urgent.keys().next().unwrap().to_string(),
+                ],
+                &queue_handle,
+            );
+            river.send_command(
+                vec![
+                    String::from("set-focused-tags"),
+                    river.urgent.values().next().unwrap().to_string(),
+                ],
+                &queue_handle,
+            )
         }
         _ => (),
     }
