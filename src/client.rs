@@ -1,12 +1,3 @@
-use crate::protocols::river_protocols::zriver_command_callback_v1::ZriverCommandCallbackV1;
-use crate::protocols::river_protocols::zriver_control_v1::ZriverControlV1;
-use crate::protocols::river_protocols::zriver_output_status_v1::{
-    Event::FocusedTags, Event::UrgentTags, ZriverOutputStatusV1,
-};
-use crate::protocols::river_protocols::zriver_seat_status_v1;
-use crate::protocols::river_protocols::zriver_seat_status_v1::ZriverSeatStatusV1;
-use crate::protocols::river_protocols::zriver_status_manager_v1;
-use crate::protocols::river_protocols::zriver_status_manager_v1::ZriverStatusManagerV1;
 use std::collections::HashMap;
 use wayland_client::{
     protocol::{
@@ -15,6 +6,17 @@ use wayland_client::{
         wl_seat::WlSeat,
     },
     Connection, Dispatch, Proxy, QueueHandle,
+};
+
+use crate::protocols::river_protocols::{
+    zriver_command_callback_v1::ZriverCommandCallbackV1,
+    zriver_control_v1::ZriverControlV1,
+    zriver_output_status_v1::{
+        Event::{FocusedTags, UrgentTags},
+        ZriverOutputStatusV1,
+    },
+    zriver_seat_status_v1::{self, ZriverSeatStatusV1},
+    zriver_status_manager_v1::{self, ZriverStatusManagerV1},
 };
 
 #[derive(Debug)]
