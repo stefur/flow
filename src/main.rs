@@ -1,9 +1,9 @@
 mod client;
 mod options;
 mod protocols;
+
 use crate::client::River;
-use crate::options::parse_args;
-use options::Arguments;
+use crate::options::{parse_args, Arguments};
 use std::error::Error;
 use wayland_client::Connection;
 
