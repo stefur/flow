@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [profile.release]
+panic = "abort"
 strip = true # Automatically strip symbols from the binary.
 opt-level = "z"  # Optimize for size.
 lto = true # This can remove dead code and often times reduces binary size.
