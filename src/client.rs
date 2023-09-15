@@ -61,12 +61,21 @@ impl Flow {
 
     /// Destroy objects when no longer needed
     pub fn destroy(&mut self) {
-        self.status_manager.take().map(|manager| manager.destroy());
+        if let Some(manager) = self.status_manager.take() {
+            manager.destroy()
+        };
+
         self.output_status
             .iter()
             .for_each(|output_status| output_status.destroy());
-        self.seat_status.take().map(|status| status.destroy());
-        self.control.take().map(|control| control.destroy());
+
+        if let Some(status) = self.seat_status.take() {
+            status.destroy()
+        };
+
+        if let Some(control) = self.control.take() {
+            control.destroy()
+        };
     }
 
     /// Checks if the requested tags are already focused
