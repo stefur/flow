@@ -1,11 +1,13 @@
+use crate::client::Flow;
+use crate::options::{parse_args, Arguments};
+use std::error::Error;
+use wayland_client::Connection;
+
 mod client;
 mod options;
 mod protocols;
 
-use crate::client::River;
-use crate::options::{parse_args, Arguments};
-use std::error::Error;
-use wayland_client::Connection;
+static ROUNDTRIP_EXPECT: &str = "All requests in queue must be sent and handled before proceeding.";
 
 fn main() {
     // Parse the options
@@ -26,7 +28,7 @@ fn main() {
         }
     };
 
-    let conn = Connection::connect_to_env().unwrap();
+    let conn = Connection::connect_to_env().expect("Failed to connect to the Wayland server!");
 
     let display = conn.display();
 
@@ -35,69 +37,67 @@ fn main() {
 
     let _registry = display.get_registry(&queue_handle, ());
 
-    let mut river = River::new();
+    let mut flow = Flow::new();
 
-    event_queue.roundtrip(&mut river).unwrap();
+    event_queue.roundtrip(&mut flow).expect(ROUNDTRIP_EXPECT);
 
     // Get the seat status
-    river.seat_status = Some(
-        river
-            .status_manager
-            .as_ref()
-            .unwrap()
-            .get_river_seat_status(river.seat.as_ref().unwrap(), &queue_handle, ()),
-    );
-    event_queue.roundtrip(&mut river).unwrap();
+    flow.seat_status = flow.status_manager.as_ref().map(|manager| {
+        manager.get_river_seat_status(
+            flow.seat.as_ref().expect("A seat should exist."),
+            &queue_handle,
+            (),
+        )
+    });
 
-    // Setup the outputs
-    for (object, name) in &river.outputs {
-        let output_status = river
-            .status_manager
-            .as_ref()
-            .unwrap()
-            .get_river_output_status(object, &queue_handle, (object.to_owned(), name.to_string()));
-        river.output_status.push(output_status);
+    event_queue.roundtrip(&mut flow).expect(ROUNDTRIP_EXPECT);
+
+    // Setup the outputs, each one with an object and name
+    for (object, name) in &flow.outputs {
+        if let Some(status_manager) = flow.status_manager.as_ref() {
+            let output_status = status_manager.get_river_output_status(
+                object,
+                &queue_handle,
+                (object.to_owned(), name.to_owned()),
+            );
+            flow.output_status.push(output_status);
+        }
     }
 
-    event_queue.roundtrip(&mut river).unwrap();
+    event_queue.roundtrip(&mut flow).expect(ROUNDTRIP_EXPECT);
 
     match command {
         Ok(Arguments::CycleTags { direction, n_tags }) => {
             // If there are no n_tags assigned, or if unwrap fails, we assume default of 9
-            river.cycle_tags(&direction, &n_tags.unwrap_or(9), &queue_handle);
+            flow.cycle_tags(&direction, &n_tags.unwrap_or(9), &queue_handle);
         }
         Ok(Arguments::ToggleTags { to_tags }) => {
-            if river.toggle_tags(&to_tags) {
-                river.send_command(vec![String::from("focus-previous-tags")], &queue_handle);
+            if flow.toggle_tags(&to_tags) {
+                flow.send_command(vec![String::from("focus-previous-tags")], &queue_handle);
             } else {
-                river.send_command(
+                flow.send_command(
                     vec![String::from("set-focused-tags"), to_tags.to_string()],
                     &queue_handle,
                 );
             }
         }
         Ok(Arguments::FocusUrgentTags) => {
-            // If there are no urgent tags there is nothing to do
-            if river.urgent.is_empty() {
-                return;
+            // Make sure there is an output as well as tags that are urgent
+            if let (Some(urgent_output), Some(urgent_tags)) =
+                (flow.urgent.keys().next(), flow.urgent.values().next())
+            {
+                flow.send_command(
+                    vec![String::from("focus-output"), urgent_output.to_owned()],
+                    &queue_handle,
+                );
+                flow.send_command(
+                    vec![String::from("set-focused-tags"), urgent_tags.to_string()],
+                    &queue_handle,
+                )
             }
-            river.send_command(
-                vec![
-                    String::from("focus-output"),
-                    river.urgent.keys().next().unwrap().to_string(),
-                ],
-                &queue_handle,
-            );
-            river.send_command(
-                vec![
-                    String::from("set-focused-tags"),
-                    river.urgent.values().next().unwrap().to_string(),
-                ],
-                &queue_handle,
-            )
         }
         _ => (),
     }
-    event_queue.roundtrip(&mut river).unwrap();
-    river.destroy();
+    event_queue.roundtrip(&mut flow).expect(ROUNDTRIP_EXPECT);
+    flow.destroy();
 }

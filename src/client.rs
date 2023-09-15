@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use wayland_client::{
     protocol::{
-        wl_output::{Event::Name as OutputName, WlOutput},
+        wl_output::{Event::Name, WlOutput},
         wl_registry::{Event::Global, WlRegistry},
         wl_seat::WlSeat,
     },
@@ -19,22 +19,24 @@ use crate::protocols::river_protocols::{
     zriver_status_manager_v1::{self, ZriverStatusManagerV1},
 };
 
+type OutputName = String;
+
 #[derive(Debug)]
-pub struct River {
+pub struct Flow {
     pub status_manager: Option<zriver_status_manager_v1::ZriverStatusManagerV1>,
     pub seat_status: Option<zriver_seat_status_v1::ZriverSeatStatusV1>,
     pub seat: Option<WlSeat>,
     pub output_status: Vec<ZriverOutputStatusV1>,
-    pub outputs: HashMap<WlOutput, String>,
+    pub outputs: HashMap<WlOutput, OutputName>,
     pub focused_output: Option<WlOutput>,
     pub focused_tags: Option<u32>,
     pub urgent: HashMap<String, u32>,
     pub control: Option<ZriverControlV1>,
 }
 
-impl River {
-    pub fn new() -> River {
-        River {
+impl Flow {
+    pub fn new() -> Flow {
+        Flow {
             status_manager: None,
             seat: None,
             seat_status: None,
@@ -47,33 +49,35 @@ impl River {
         }
     }
 
+    /// Send a command to river
     pub fn send_command(&self, arguments: Vec<String>, queue_handle: &QueueHandle<Self>) {
-        for arg in arguments.iter() {
-            self.control.as_ref().unwrap().add_argument(arg.to_string());
+        if let (Some(control), Some(seat)) = (&self.control, &self.seat) {
+            for arg in &arguments {
+                control.add_argument(arg.to_owned());
+            }
+            control.run_command(seat, queue_handle, ());
         }
-        self.control
-            .as_ref()
-            .unwrap()
-            .run_command(self.seat.as_ref().unwrap(), queue_handle, ());
     }
 
-    pub fn destroy(&self) {
-        self.status_manager.as_ref().unwrap().destroy();
-        for output_status in self.output_status.iter() {
-            output_status.destroy();
-        }
-        self.seat_status.as_ref().unwrap().destroy();
-        self.control.as_ref().unwrap().destroy();
+    /// Destroy objects when no longer needed
+    pub fn destroy(&mut self) {
+        self.status_manager.take().map(|manager| manager.destroy());
+        self.output_status
+            .iter()
+            .for_each(|output_status| output_status.destroy());
+        self.seat_status.take().map(|status| status.destroy());
+        self.control.take().map(|control| control.destroy());
     }
 
+    /// Checks if the requested tags are already focused
     pub fn toggle_tags(&self, to_tags: &u32) -> bool {
-        self.focused_tags.unwrap_or_default() == *to_tags
+        self.focused_tags == Some(*to_tags)
     }
 
     pub fn cycle_tags(&self, direction: &str, n_tags: &u32, queue_handle: &QueueHandle<Self>) {
         let last_tag: u32 = 1 << (n_tags - 1);
         let mut new_tags = 0;
-        let mut tags = self.focused_tags.unwrap();
+        let mut tags = self.focused_tags.unwrap_or_default();
 
         match direction {
             "next" => {
@@ -101,7 +105,7 @@ impl River {
     }
 }
 
-impl Dispatch<WlRegistry, ()> for River {
+impl Dispatch<WlRegistry, ()> for Flow {
     fn event(
         state: &mut Self,
         registry: &WlRegistry,
@@ -146,7 +150,7 @@ impl Dispatch<WlRegistry, ()> for River {
     }
 }
 
-impl Dispatch<ZriverOutputStatusV1, (WlOutput, String)> for River {
+impl Dispatch<ZriverOutputStatusV1, (WlOutput, String)> for Flow {
     fn event(
         state: &mut Self,
         _: &ZriverOutputStatusV1,
@@ -158,7 +162,12 @@ impl Dispatch<ZriverOutputStatusV1, (WlOutput, String)> for River {
         match event {
             FocusedTags { tags } => {
                 // Ignore the tags that are not on the focused output
-                if &output.0 != state.focused_output.as_ref().unwrap() {
+                if &output.0
+                    != state
+                        .focused_output
+                        .as_ref()
+                        .expect("There should be a focused output.")
+                {
                     return;
                 }
                 // Set the focused tags
@@ -175,7 +184,7 @@ impl Dispatch<ZriverOutputStatusV1, (WlOutput, String)> for River {
     }
 }
 
-impl Dispatch<ZriverSeatStatusV1, ()> for River {
+impl Dispatch<ZriverSeatStatusV1, ()> for Flow {
     fn event(
         state: &mut Self,
         _: &ZriverSeatStatusV1,
@@ -190,7 +199,7 @@ impl Dispatch<ZriverSeatStatusV1, ()> for River {
     }
 }
 
-impl Dispatch<WlOutput, ()> for River {
+impl Dispatch<WlOutput, ()> for Flow {
     fn event(
         state: &mut Self,
         output: &WlOutput,
@@ -199,13 +208,13 @@ impl Dispatch<WlOutput, ()> for River {
         _: &Connection,
         _: &QueueHandle<Self>,
     ) {
-        if let OutputName { name } = event {
+        if let Name { name } = event {
             state.outputs.insert(output.to_owned(), name);
         }
     }
 }
 
-impl Dispatch<WlSeat, ()> for River {
+impl Dispatch<WlSeat, ()> for Flow {
     fn event(
         _: &mut Self,
         _: &WlSeat,
@@ -217,7 +226,7 @@ impl Dispatch<WlSeat, ()> for River {
     }
 }
 
-impl Dispatch<ZriverStatusManagerV1, ()> for River {
+impl Dispatch<ZriverStatusManagerV1, ()> for Flow {
     fn event(
         _: &mut Self,
         _: &ZriverStatusManagerV1,
@@ -229,7 +238,7 @@ impl Dispatch<ZriverStatusManagerV1, ()> for River {
     }
 }
 
-impl Dispatch<ZriverCommandCallbackV1, ()> for River {
+impl Dispatch<ZriverCommandCallbackV1, ()> for Flow {
     fn event(
         _: &mut Self,
         _: &ZriverCommandCallbackV1,
@@ -241,7 +250,7 @@ impl Dispatch<ZriverCommandCallbackV1, ()> for River {
     }
 }
 
-impl Dispatch<ZriverControlV1, ()> for River {
+impl Dispatch<ZriverControlV1, ()> for Flow {
     fn event(
         _: &mut Self,
         _: &ZriverControlV1,
