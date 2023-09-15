@@ -1,5 +1,6 @@
 # flow
-This started as a rewrite of [riverwm-utils](https://github.com/NickHastings/riverwm-utils) in Rust (very cliché, I know). Then I decided to add a few other features as well. See below.
+A small utility that brings some extra commands to control [river](https://github.com/riverwm/river).  
+Originally inspired by [riverwm-utils](https://github.com/NickHastings/riverwm-utils).
 
 ## Features
 - Cycle the focused tags, either to next or previous tag.

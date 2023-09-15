@@ -1,4 +1,4 @@
-pub const HELP: &str = r#"Flow
+pub const HELP: &str = r#"flow
 ====
 
 USAGE:
