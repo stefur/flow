@@ -6,7 +6,9 @@ USAGE:
 FLAGS:
   -h, --help    Prints help information
 COMMAND:
-  cycle-tags    Takes two arguments. Direction (next or previous) and an optional number of available tags (Default: 9).
+  cycle-tags            Takes two arguments. Direction (next or previous) and an optional number of available tags (Default: 9).
+  toggle-tags           Toggle previous tags if selected tags already focused.
+  focus-urgent-tags     Focus urgent tags on an output.
 "#;
 
 #[derive(Debug)]
