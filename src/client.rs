@@ -1,11 +1,13 @@
 use std::collections::HashMap;
+use std::fmt;
 use wayland_client::{
     protocol::{
-        wl_output::{Event::Name, WlOutput},
+        wl_output::{Event::Mode, Event::Name, Mode as OutputMode, WlOutput},
         wl_registry::{Event::Global, WlRegistry},
         wl_seat::WlSeat,
     },
     Connection, Dispatch, Proxy, QueueHandle,
+    WEnum::Value,
 };
 
 use crate::protocols::river_protocols::{
@@ -19,7 +21,25 @@ use crate::protocols::river_protocols::{
     zriver_status_manager_v1::{self, ZriverStatusManagerV1},
 };
 
-type OutputName = String;
+#[derive(Debug)]
+pub struct OutputProperties {
+    pub name: String,
+    pub height: i32,
+    pub width: i32,
+    pub refresh: i32,
+    pub focused: bool,
+}
+
+impl fmt::Display for OutputProperties {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let focus = if self.focused { "Focused" } else { "" };
+        write!(
+            f,
+            "{} {}x{}@{} {}",
+            self.name, self.width, self.height, self.refresh, focus
+        )
+    }
+}
 
 #[derive(Debug)]
 pub struct Flow {
@@ -27,7 +47,7 @@ pub struct Flow {
     pub seat_status: Option<zriver_seat_status_v1::ZriverSeatStatusV1>,
     pub seat: Option<WlSeat>,
     pub output_status: Vec<ZriverOutputStatusV1>,
-    pub outputs: HashMap<WlOutput, OutputName>,
+    pub outputs: HashMap<WlOutput, OutputProperties>,
     pub focused_output: Option<WlOutput>,
     pub focused_tags: Option<u32>,
     pub urgent: HashMap<String, u32>,
@@ -217,8 +237,34 @@ impl Dispatch<WlOutput, ()> for Flow {
         _: &Connection,
         _: &QueueHandle<Self>,
     ) {
-        if let Name { name } = event {
-            state.outputs.insert(output.to_owned(), name);
+        let properties = state
+            .outputs
+            .entry(output.to_owned())
+            .or_insert(OutputProperties {
+                name: String::new(),
+                height: 0,
+                width: 0,
+                refresh: 0,
+                focused: false,
+            });
+
+        match event {
+            Name { name } => {
+                properties.name = name;
+            }
+            Mode {
+                flags,
+                width,
+                height,
+                refresh,
+            } => {
+                if flags == Value(OutputMode::Current) {
+                    properties.width = width;
+                    properties.height = height;
+                    properties.refresh = refresh;
+                }
+            }
+            _ => (),
         }
     }
 }

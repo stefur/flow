@@ -21,6 +21,7 @@ fn main() {
             Arguments::CycleTags { .. } => Ok(args),
             Arguments::ToggleTags { .. } => Ok(args),
             Arguments::FocusUrgentTags => Ok(args),
+            Arguments::Outputs => Ok(args),
         },
         Err(error) => {
             eprintln!("Error: {}", error);
@@ -53,12 +54,12 @@ fn main() {
     event_queue.roundtrip(&mut flow).expect(ROUNDTRIP_EXPECT);
 
     // Setup the outputs, each one with an object and name
-    for (object, name) in &flow.outputs {
+    for (object, output_properties) in &flow.outputs {
         if let Some(status_manager) = flow.status_manager.as_ref() {
             let output_status = status_manager.get_river_output_status(
                 object,
                 &queue_handle,
-                (object.to_owned(), name.to_owned()),
+                (object.to_owned(), output_properties.name.to_owned()),
             );
             flow.output_status.push(output_status);
         }
@@ -94,6 +95,14 @@ fn main() {
                     vec![String::from("set-focused-tags"), urgent_tags.to_string()],
                     &queue_handle,
                 )
+            }
+        }
+        Ok(Arguments::Outputs) => {
+            for (object, output) in flow.outputs.iter_mut() {
+                if Some(object) == flow.focused_output.as_ref() {
+                    output.focused = true;
+                }
+                println!("{}", output);
             }
         }
         _ => (),
