@@ -83,7 +83,7 @@ impl Flow {
         self.focused_tags == Some(*to_tags)
     }
 
-    pub fn cycle_tags(&self, direction: &str, n_tags: &u32, queue_handle: &QueueHandle<Self>) {
+    pub fn cycle_tags(&self, direction: &str, n_tags: &u8, queue_handle: &QueueHandle<Self>) {
         let last_tag: u32 = 1 << (n_tags - 1);
         let mut new_tags = 0;
         let mut tags = self.focused_tags.unwrap_or_default();

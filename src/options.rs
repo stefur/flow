@@ -18,7 +18,7 @@ pub enum Arguments {
     },
     CycleTags {
         direction: String,
-        n_tags: Option<u32>,
+        n_tags: Option<u8>,
     },
     ToggleTags {
         to_tags: u32,
