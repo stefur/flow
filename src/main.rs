@@ -21,6 +21,7 @@ fn main() {
             Arguments::CycleTags { .. } => Ok(args),
             Arguments::ToggleTags { .. } => Ok(args),
             Arguments::FocusUrgentTags => Ok(args),
+            Arguments::FocusSetViewTags { .. } => Ok(args),
         },
         Err(error) => {
             eprintln!("Error: {}", error);
@@ -95,6 +96,16 @@ fn main() {
                     &queue_handle,
                 )
             }
+        }
+        Ok(Arguments::FocusSetViewTags { to_tags }) => {
+            flow.send_command(
+                vec![String::from("set-view-tags"), to_tags.to_string()],
+                &queue_handle,
+            );
+            flow.send_command(
+                vec![String::from("set-focused-tags"), to_tags.to_string()],
+                &queue_handle,
+            );
         }
         _ => (),
     }
