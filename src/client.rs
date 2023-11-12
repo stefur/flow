@@ -30,7 +30,7 @@ pub struct Flow {
     pub outputs: HashMap<WlOutput, OutputName>,
     pub focused_output: Option<WlOutput>,
     pub focused_tags: Option<u32>,
-    pub urgent: HashMap<String, u32>,
+    pub urgent: HashMap<OutputName, u32>,
     pub control: Option<ZriverControlV1>,
 }
 
