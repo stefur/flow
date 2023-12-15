@@ -7,7 +7,7 @@ Currently the following commands can be used with flow.
 
 | Command | Arguments | Description | Example |
 | --- | --- | --- | --- |
-| `cycle-tags` | Direction: `next` or `previous`. Number of available tags: `int`, defaults to `9` if omitted. | Move focused tag to the next or previous tag. | `flow cycle-tags next 6` |
+| `cycle-tags` | Direction: `next` or `previous`. Number of available tags: `int`, defaults to `9` if omitted. | Move focused tag to the next or previous tag. Optionally the user can append the flag `-o` or `--occupied` to only cycle through occupied tags. | `flow cycle-tags next 6` |
 | `toggle-tags` | Tags to focus. | Focus tags or toggle previous tags if already focused. | `flow toggle-tags 64` |
 | `focus-urgent-tags` | None. | Focus urgent tags on an output. | `flow focus-urgent-tags` |
 | `focus-set-view-tags` | Tags to set and focus. | Set tags for a view and then focus the tags | `flow focus-set-view-tags 16` |

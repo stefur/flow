@@ -68,9 +68,18 @@ fn main() {
     event_queue.roundtrip(&mut flow).expect(ROUNDTRIP_EXPECT);
 
     match command {
-        Ok(Arguments::CycleTags { direction, n_tags }) => {
+        Ok(Arguments::CycleTags {
+            direction,
+            n_tags,
+            skip_unoccupied,
+        }) => {
             // If there are no n_tags assigned, or if unwrap fails, we assume default of 9
-            flow.cycle_tags(&direction, &n_tags.unwrap_or(9), &queue_handle);
+            flow.cycle_tags(
+                &direction,
+                &n_tags.unwrap_or(9),
+                skip_unoccupied,
+                &queue_handle,
+            );
         }
         Ok(Arguments::ToggleTags { to_tags }) => {
             if flow.toggle_tags(&to_tags) {
