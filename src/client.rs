@@ -142,6 +142,15 @@ impl Flow {
         result
     }
 
+    /// Check if the output is the currently focused one
+    fn is_focused_output(&self, output: &WlOutput) -> bool {
+        output
+            == self
+                .focused_output
+                .as_ref()
+                .expect("There should be a focused output.")
+    }
+
     /// Cycle the tagmask in either next or previous direction
     pub fn cycle_tags(
         &self,
@@ -280,27 +289,18 @@ impl Dispatch<ZriverOutputStatusV1, (WlOutput, String)> for Flow {
         _: &QueueHandle<Self>,
     ) {
         match event {
-            ViewTags { tags } => {
+            // Ignore the tags that are not on the focused output
+            ViewTags { tags } if state.is_focused_output(&output.0) => {
                 state.occupied_tags = tags;
             }
-            FocusedTags { tags } => {
-                // Ignore the tags that are not on the focused output
-                if &output.0
-                    != state
-                        .focused_output
-                        .as_ref()
-                        .expect("There should be a focused output.")
-                {
-                    return;
-                }
+            // Same here
+            FocusedTags { tags } if state.is_focused_output(&output.0) => {
                 // Set the focused tags
                 state.focused_tags = Some(tags);
             }
-            UrgentTags { tags } => {
-                // If urgent tags are not 0 (e.g. none are urgent) ,we add the output name and tags to state
-                if tags != 0 {
-                    state.urgent.insert(output.1.to_owned(), tags);
-                }
+            // If urgent tags are not 0 (e.g. none are urgent) ,we add the output name and tags to state
+            UrgentTags { tags } if tags != 0 => {
+                state.urgent.insert(output.1.to_owned(), tags);
             }
             _ => (),
         }
