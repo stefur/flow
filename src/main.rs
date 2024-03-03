@@ -1,11 +1,13 @@
 use crate::client::Flow;
 use crate::options::{parse_args, Arguments};
 use std::error::Error;
-use wayland_client::Connection;
+use wayland_client::{Connection, Proxy};
 
 mod client;
 mod options;
+mod output;
 mod protocols;
+mod seat;
 
 static ROUNDTRIP_EXPECT: &str = "All requests in queue must be sent and handled before proceeding.";
 
@@ -43,25 +45,27 @@ fn main() {
     event_queue.roundtrip(&mut flow).expect(ROUNDTRIP_EXPECT);
 
     // Get the seat status
-    flow.seat_status = flow.status_manager.as_ref().map(|manager| {
-        manager.get_river_seat_status(
-            flow.seat.as_ref().expect("A seat should exist."),
-            &queue_handle,
-            (),
-        )
-    });
+    if let Some(seat) = flow.seat.as_mut() {
+        seat.seat_status = Some(
+            flow.status_manager
+                .as_ref()
+                .expect("A status manager should exist.")
+                .get_river_seat_status(&seat.wlseat, &queue_handle, ()),
+        );
+    } else {
+        panic!("Failed to get the seat status. A seat should exist but was None.")
+    }
 
     event_queue.roundtrip(&mut flow).expect(ROUNDTRIP_EXPECT);
 
-    // Setup the outputs, each one with an object and name
-    for (object, name) in &flow.outputs {
+    // Setup the outputs, pass on the wloutput id so we bind the state correctly to each output
+    for output in &mut flow.outputs {
         if let Some(status_manager) = flow.status_manager.as_ref() {
-            let output_status = status_manager.get_river_output_status(
-                object,
+            output.status = Some(status_manager.get_river_output_status(
+                &output.wloutput,
                 &queue_handle,
-                (object.to_owned(), name.to_owned()),
-            );
-            flow.output_status.push(output_status);
+                output.wloutput.id(),
+            ));
         }
     }
 
@@ -73,37 +77,46 @@ fn main() {
             n_tags,
             skip_unoccupied,
         }) => {
-            // If there are no n_tags assigned, or if unwrap fails, we assume default of 9
-            flow.cycle_tags(
-                &direction,
-                &n_tags.unwrap_or(9),
-                skip_unoccupied,
-                &queue_handle,
-            );
-        }
-        Ok(Arguments::ToggleTags { to_tags }) => {
-            if flow.toggle_tags(&to_tags) {
-                flow.send_command(vec![String::from("focus-previous-tags")], &queue_handle);
-            } else {
+            // Find the focused output state
+            if let Some(focused_output_state) = flow.find_focused_output() {
+                // If there are no n_tags assigned, or if unwrap fails, we assume default of 9
+                let new_tags = focused_output_state.cycle_tags(
+                    &direction,
+                    &n_tags.unwrap_or(9),
+                    skip_unoccupied,
+                );
+
                 flow.send_command(
-                    vec![String::from("set-focused-tags"), to_tags.to_string()],
+                    vec![String::from("set-focused-tags"), new_tags.to_string()],
                     &queue_handle,
                 );
             }
         }
+        Ok(Arguments::ToggleTags { to_tags }) => {
+            if let Some(output) = flow.find_focused_output() {
+                if output.toggle_tags(&to_tags) {
+                    flow.send_command(vec![String::from("focus-previous-tags")], &queue_handle);
+                } else {
+                    flow.send_command(
+                        vec![String::from("set-focused-tags"), to_tags.to_string()],
+                        &queue_handle,
+                    );
+                }
+            }
+        }
         Ok(Arguments::FocusUrgentTags) => {
             // Make sure there is an output as well as tags that are urgent
-            if let (Some(urgent_output), Some(urgent_tags)) =
-                (flow.urgent.keys().next(), flow.urgent.values().next())
-            {
-                flow.send_command(
-                    vec![String::from("focus-output"), urgent_output.to_owned()],
-                    &queue_handle,
-                );
-                flow.send_command(
-                    vec![String::from("set-focused-tags"), urgent_tags.to_string()],
-                    &queue_handle,
-                )
+            if let Some(output) = flow.find_focused_output() {
+                if let Some(urgent_tags) = output.urgent_tags {
+                    flow.send_command(
+                        vec![String::from("focus-output"), output.name.to_owned()],
+                        &queue_handle,
+                    );
+                    flow.send_command(
+                        vec![String::from("set-focused-tags"), urgent_tags.to_string()],
+                        &queue_handle,
+                    )
+                }
             }
         }
         Ok(Arguments::FocusSetViewTags { to_tags }) => {
