@@ -77,14 +77,10 @@ fn main() {
             n_tags,
             skip_unoccupied,
         }) => {
-            // Find the focused output state
-            if let Some(focused_output_state) = flow.find_output("focused") {
+            // Find the focused output
+            if let Some(output) = flow.find_output("focused") {
                 // If there are no n_tags assigned, or if unwrap fails, we assume default of 9
-                let new_tags = focused_output_state.cycle_tags(
-                    &direction,
-                    &n_tags.unwrap_or(9),
-                    skip_unoccupied,
-                );
+                let new_tags = output.cycle_tags(&direction, &n_tags.unwrap_or(9), skip_unoccupied);
 
                 flow.send_command(
                     vec![String::from("set-focused-tags"), new_tags.to_string()],
