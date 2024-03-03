@@ -71,12 +71,21 @@ impl Flow {
         };
     }
 
-    /// Get the currently focused output
-    pub fn find_focused_output(&self) -> Option<&Output> {
-        return self.outputs.iter().find(|output| output.focused);
+    /// Identify an output based on a specific state
+    pub fn find_output(&self, state: &str) -> Option<&Output> {
+        match state {
+            "focused" => return self.outputs.iter().find(|output| output.focused),
+            "urgent" => {
+                return self
+                    .outputs
+                    .iter()
+                    .find(|output| output.urgent_tags.is_some())
+            }
+            &_ => None,
+        }
     }
 
-    /// Identify an output from the wloutput id
+    /// Get a mutable output matching the wloutput id. This is used to update state.
     pub fn get_output(&mut self, wloutput_id: &ObjectId) -> Option<&mut Output> {
         self.outputs
             .iter_mut()

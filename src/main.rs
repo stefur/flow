@@ -78,7 +78,7 @@ fn main() {
             skip_unoccupied,
         }) => {
             // Find the focused output state
-            if let Some(focused_output_state) = flow.find_focused_output() {
+            if let Some(focused_output_state) = flow.find_output("focused") {
                 // If there are no n_tags assigned, or if unwrap fails, we assume default of 9
                 let new_tags = focused_output_state.cycle_tags(
                     &direction,
@@ -93,7 +93,7 @@ fn main() {
             }
         }
         Ok(Arguments::ToggleTags { to_tags }) => {
-            if let Some(output) = flow.find_focused_output() {
+            if let Some(output) = flow.find_output("focused") {
                 if output.toggle_tags(&to_tags) {
                     flow.send_command(vec![String::from("focus-previous-tags")], &queue_handle);
                 } else {
@@ -105,8 +105,8 @@ fn main() {
             }
         }
         Ok(Arguments::FocusUrgentTags) => {
-            // Make sure there is an output as well as tags that are urgent
-            if let Some(output) = flow.find_focused_output() {
+            // Find any urgent output
+            if let Some(output) = flow.find_output("urgent") {
                 if let Some(urgent_tags) = output.urgent_tags {
                     flow.send_command(
                         vec![String::from("focus-output"), output.name.to_owned()],
