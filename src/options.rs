@@ -13,10 +13,9 @@ COMMAND:
   focus-set-view-tags   Set view tags and then focus the tags.
 "#;
 
-#[derive(Debug)]
 pub enum Arguments {
     Global {
-        help: bool,
+        _help: bool,
     },
     CycleTags {
         direction: String,
@@ -50,7 +49,7 @@ pub fn parse_args() -> Result<Arguments, Box<dyn std::error::Error>> {
         }),
         Some(_) => Err("Unknown subcommand".into()),
         None => Ok(Arguments::Global {
-            help: pargs.contains(["-h", "--help"]),
+            _help: pargs.contains(["-h", "--help"]),
         }),
     }
 }

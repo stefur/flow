@@ -15,7 +15,7 @@ fn main() {
     // Parse the options
     let command: Result<Arguments, Box<dyn Error>> = match parse_args() {
         Ok(args) => match &args {
-            Arguments::Global { help: _ } => {
+            Arguments::Global { _help: _ } => {
                 print!("{}", options::HELP);
                 std::process::exit(0);
             }

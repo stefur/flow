@@ -13,5 +13,5 @@ codegen-units = 1 # Allow for maximum size reduction optimizations, but longer c
 [dependencies]
 wayland-client = "0.31"
 wayland-scanner = "0.31"
-wayland-protocols = "0.31"
+wayland-protocols = "0.32"
 pico-args = "0.5"
