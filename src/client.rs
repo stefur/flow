@@ -74,13 +74,11 @@ impl Flow {
     /// Identify an output based on a specific state
     pub fn find_output(&self, state: &str) -> Option<&Output> {
         match state {
-            "focused" => return self.outputs.iter().find(|output| output.focused),
-            "urgent" => {
-                return self
-                    .outputs
-                    .iter()
-                    .find(|output| output.urgent_tags.is_some())
-            }
+            "focused" => self.outputs.iter().find(|output| output.focused),
+            "urgent" => self
+                .outputs
+                .iter()
+                .find(|output| output.urgent_tags.is_some()),
             &_ => None,
         }
     }
