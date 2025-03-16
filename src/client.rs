@@ -1,11 +1,11 @@
 use wayland_client::{
+    Connection, Dispatch, Proxy, QueueHandle,
     backend::ObjectId,
     protocol::{
         wl_output::{Event::Name, WlOutput},
         wl_registry::{Event::Global, WlRegistry},
         wl_seat::WlSeat,
     },
-    Connection, Dispatch, Proxy, QueueHandle,
 };
 
 use crate::output::Output;

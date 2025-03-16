@@ -1,5 +1,5 @@
 use crate::client::Flow;
-use crate::options::{parse_args, Arguments};
+use crate::options::{Arguments, parse_args};
 use std::error::Error;
 use wayland_client::{Connection, Proxy};
 
