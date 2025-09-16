@@ -31,7 +31,7 @@ impl Output {
         let tags: u32 = self.focused_tags.unwrap_or_default();
         let mut new_tags: u32 = tags;
 
-        let occupied_tags = self.find_set_bits_positions();
+        let occupied_tags = self.find_set_bits_positions(*n_tags);
 
         match direction {
             // Only skip unoccupied on user flag and if there are more than one occupied tag
@@ -135,7 +135,7 @@ impl Output {
     }
 
     /// Find the indices of set bits
-    fn find_set_bits_positions(&self) -> Vec<u8> {
+    fn find_set_bits_positions(&self, n_tags: u8) -> Vec<u8> {
         let mut result = Vec::new();
 
         // Iterate over 4-byte chunks of the occupied tags
@@ -146,8 +146,12 @@ impl Output {
                 for bit_index in 0..8 {
                     // Check if the bit at bit_index is set = occupied tag
                     if (byte & (1 << bit_index)) != 0 {
-                        // If set, calculate the overall bit index and push it to the result vector
-                        result.push((byte_index * 8 + bit_index) as u8);
+                        // If set, calculate the overall bit index
+                        let index = (byte_index * 8 + bit_index) as u8;
+                        // Only keep it if it's within the number of tags
+                        if index < n_tags {
+                            result.push(index);
+                        }
                     }
                 }
             }
