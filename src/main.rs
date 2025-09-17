@@ -102,8 +102,8 @@ fn main() {
         }
         Ok(Arguments::FocusUrgentTags) => {
             // Find any urgent output
-            if let Some(output) = flow.find_output("urgent") {
-                if let Some(urgent_tags) = output.urgent_tags {
+            if let Some(output) = flow.find_output("urgent")
+                && let Some(urgent_tags) = output.urgent_tags {
                     flow.send_command(
                         vec![String::from("focus-output"), output.name.to_owned()],
                         &queue_handle,
@@ -113,7 +113,6 @@ fn main() {
                         &queue_handle,
                     )
                 }
-            }
         }
         Ok(Arguments::FocusSetViewTags { to_tags }) => {
             flow.send_command(

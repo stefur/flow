@@ -162,11 +162,10 @@ impl Dispatch<ZriverOutputStatusV1, ObjectId> for Flow {
             }
             UrgentTags { tags } => {
                 // If urgent tags are not 0 (e.g. none are urgent), we add the tags
-                if tags != 0 {
-                    if let Some(output) = state.get_output(wloutput_id) {
+                if tags != 0
+                    && let Some(output) = state.get_output(wloutput_id) {
                         output.urgent_tags = Some(tags);
                     }
-                }
             }
             _ => (),
         }
@@ -182,11 +181,10 @@ impl Dispatch<ZriverSeatStatusV1, ()> for Flow {
         _: &Connection,
         _: &QueueHandle<Self>,
     ) {
-        if let zriver_seat_status_v1::Event::FocusedOutput { output } = event {
-            if let Some(output) = state.get_output(&output.id()) {
+        if let zriver_seat_status_v1::Event::FocusedOutput { output } = event
+            && let Some(output) = state.get_output(&output.id()) {
                 output.focused = true;
             }
-        }
     }
 }
 
