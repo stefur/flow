@@ -1,3 +1,6 @@
+> [!NOTE]  
+> No longer maintained.
+
 # flow
 A small utility that brings some extra commands to control [river](https://github.com/riverwm/river).  
 Originally inspired by [riverwm-utils](https://github.com/NickHastings/riverwm-utils).
